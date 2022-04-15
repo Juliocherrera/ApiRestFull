@@ -1,0 +1,501 @@
+---- Primera parte ----
+
+--- Rutas estaticas de acceso ---
+1. Creamos la carpeta llamada "Utilidades"
+2. Dentro creamos la clase "CT"
+3. La clase la hacemos estatica:
+
+public static class CT
+    {
+    }
+
+4. dentro creamos la ruta principal:
+
+ public static class CT
+    {
+        //Creamos la ruta principal
+        public static string UrlBaseApi = "https://localhost:44367/";
+    }
+
+5. Debejo creamos las constantes de las demas rutas:
+
+public static class CT
+    {
+        //Creamos la ruta principal
+        public static string UrlBaseApi = "https://localhost:44367/";
+
+        //Ahora aqui vamos a crear las constantes para las demas direcciones
+        public static string RutaCategoriasApi = UrlBaseApi +  "api/Categorias/";
+        public static string RutaPeliculasApi = UrlBaseApi + "api/Peliculas/";
+        public static string RutaUsuariosApi = UrlBaseApi + "api/Usuarios/";
+
+        //Faltan otras rutas para buscar y filtrar peliculas por categoria
+    }
+
+--- Configuración del cliente HTTP ---
+1. Abrimos el archivo Starup.cs
+2. En el metodo ConfigureServices agregamos esto:
+
+ //se agrega esta linea para los llamados HTTP
+            services.AddHttpClient();
+
+3. Ahora vamos a configurar el acceso a CORS
+4. Abrimos el archivo startup.cs y en le metodo Configure agregamos despues de app.Userouting():
+
+          app.UseCors(x => x
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                );
+
+
+---- Segunda parte ----
+
+--- Creación de Repositorios e interfaces ---
+1. Cramos una carpeta llamada "Repositorio"
+2. Dentro se la carpeta creamos otra que se llama "IRepositorio" en donde van las interfaces
+3. Dentro del IRepositorio creamos la interfaz llamada "IRepositorio", esta es una clase generica en donde se van a crear los metodos
+4. Con esto creamos una clase publica generica:
+
+ public interface IRepositorio<T> where T : class
+    {
+    }
+5. Creamos el metodo para traer la lista de categorias, peliculas y usuarios
+// Con este metodo traemos la lista de las categorias, peliculas y usuarios, recibe el parametro url, importamos el using.System.Collections;
+        Task<IEnumerable> GetTodoAsync(string url);
+
+6. Creamos el primer metodo Getsync que recibe dos parametros la url y el ID
+
+Task<T> GetAsync(string url, int Id);
+
+7. Creamos el metodo para crear peliculas o categorias
+//Metodo para crear peliculas y categorias, recibe como parametro la url
+        Task<bool> CrearAsync(string url, T itemActualizar);
+8. Creamos el metodo para actualizar peliculas o categorias
+//Metodo para crear peliculas y categorias, recibe como parametro la url
+        Task<bool> ActualizarAsync(string url, T itemActualizar);
+
+9. Creamos el metodo para borrar qye recibe como parametros la url y el id
+//Metodo para borra peliculas y categorias
+        Task<bool> BorrarAsync(string url, int Id);
+
+--- Ahora vamos a crear los repositorios ---
+1. dentro de la carpeta Repositorio creamos una clase llamada Repositorio
+2. Con este codigo ligamos la clase repositorio con la interface de Irepositorio en donde estan los metodos:
+
+public class Repositorio<T> : IRepositorio<T> where T : class
+
+3. La clase quedaria asi:
+
+public class Repositorio<T> : IRepositorio<T> where T : class
+    {
+        public Task<bool> ActualizarAsync(string url, T itemActualizar)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> BorrarAsync(string url, int Id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> CrearAsync(string url, T itemActualizar)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<T> GetAsync(string url, int Id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable> GetTodoAsync(string url)
+        {
+            throw new NotImplementedException();
+        }
+    }
+4. Ahora vamos hacer la inyección de dependencias con los siguiente:
+
+//Inyección de dependencias, se debe importar el IHttpClientFactory
+        private readonly IHttpClientFactory _clientFactory;
+
+5. Ahora creamos el constructor:
+
+public Repositorio(IHttpClientFactory clientFactory)
+        {
+            _clientFactory = clientFactory;
+        }
+
+5. Una vez implementado el repositorio debemos de empezar a programar en los metodos.
+6. El primer metodo es ActualizarAsync:
+ - Hacemos la peticion: 
+   var peticion = new HttpRequestMessage(HttpMethod.Patch, url);
+ 
+ - Hacemos un IF para validar que el itemActualizar no este vacio:
+
+ if(itemActualizar != null)
+            {
+                peticion.Content = new StringContent(
+                    JsonConvert.SerializeObject(itemActualizar), Encoding.UTF8, "application/json"
+                    );
+            }
+7. El metodo completo queda asi:
+
+public async Task<bool> ActualizarAsync(string url, T itemActualizar)
+        {
+            var peticion = new HttpRequestMessage(HttpMethod.Patch, url);
+
+            if(itemActualizar != null)
+            {
+                peticion.Content = new StringContent(
+                    JsonConvert.SerializeObject(itemActualizar), Encoding.UTF8, "application/json"
+                    );
+            }
+            else
+            {
+                return false;
+            }
+
+            var cliente = _clientFactory.CreateClient();
+            HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
+
+            //Validar si se actualizo y retorna booleano
+            if (respuesta.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+8. Creacion del metodo BorrarAsync:
+
+public async Task<bool> BorrarAsync(string url, int Id)
+        {
+            //Creamos la peticion de tipo delete
+            var peticion = new HttpRequestMessage(HttpMethod.Delete, url + Id);
+
+            var cliente = _clientFactory.CreateClient();
+            HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
+
+            //Validar si se borro y retorna booleano
+            if (respuesta.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+9. Metodo para crear:
+
+public async Task<bool> CrearAsync(string url, T itemCrear)
+        {
+            var peticion = new HttpRequestMessage(HttpMethod.Post, url);
+
+            if (itemCrear != null)
+            {
+                peticion.Content = new StringContent(
+                    JsonConvert.SerializeObject(itemCrear), Encoding.UTF8, "application/json"
+                    );
+            }
+            else
+            {
+                return false;
+            }
+
+            var cliente = _clientFactory.CreateClient();
+            HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
+
+            //Validar si se creo y retorna booleano
+            if (respuesta.StatusCode == System.Net.HttpStatusCode.Created)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+10. Metodo para obtener una categoria individual
+
+public async Task<T> GetAsync(string url, int Id)
+        {
+            //Creamos la peticion de tipo delete
+            var peticion = new HttpRequestMessage(HttpMethod.Get, url + Id);
+
+            var cliente = _clientFactory.CreateClient();
+            HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
+
+            //Validar si se actualizo y retorna booleano
+            if (respuesta.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                var jsonString = await respuesta.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<T>(jsonString);
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+11. Crear el metodo para GetTodoAsync:
+
+public async Task<IEnumerable> GetTodoAsync(string url)
+        {
+            //Creamos la peticion de tipo delete
+            var peticion = new HttpRequestMessage(HttpMethod.Get, url);
+
+            var cliente = _clientFactory.CreateClient();
+            HttpResponseMessage respuesta = await cliente.SendAsync(peticion);
+
+            //Validar si se actualizo y retorna booleano
+            if (respuesta.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                var jsonString = await respuesta.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<IEnumerable>(jsonString);
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+
+---- Creacion de los modelos ---
+1. En la carpeta modelos creamos la clase: Categoria.cs
+2. El modelo de Categoria queda asi:
+
+public class Categoria
+    {
+        public int Id { get; set; }
+        [Required(ErrorMessage = "El nombre es obligatorio")]
+        public string Nombre { get; set; }
+        public DateTime FechaCreacion { get; set; }
+    }
+3. El modelo Pelicula queda asi:
+
+public class Pelicula
+    {
+        public int Id { get; set; }
+        [Required(ErrorMessage = "El nombre es obligatorio")]
+        public string Nombre { get; set; }
+
+        public byte[] RutaImagen { get; set; }
+        [Required(ErrorMessage = "La descripción es obligatoria")]
+        public string Descripcion { get; set; }
+        public string Duracion { get; set; }
+        public enum TipoClasificacion { Siete, Trece, Dieciseis, Dieciocho }
+        public TipoClasificacion Clasificacion { get; set; }
+        public DateTime FechaCreacion { get; set; }
+
+        public int categoriaId { get; set; }
+        public Categoria Categoria { get; set; }
+    }
+
+4. Creamos el modelo UsuarioU:
+
+public class UsuarioU
+    {
+        public int Id { get; set; }
+        public string UsuarioA { get; set; }
+        public string PasswordHash { get; set; }
+    }
+
+--- Ahora vamos a crear los IRepositorios para categoria, peliculas y usuarios ---
+1. En la carpeta Repositorio->IRepositorio y creamos la interfaz de ICategoriaRepositorio
+2. En la interface le agrego el atributo public:
+
+public interface ICategoriaRepositorio
+    {
+    }
+
+3. El ICategoriaRepositorio Hereda de IRepositorio y trabaja con el modelo Categoria:
+
+public interface ICategoriaRepositorio : IRepositorio<Categoria>
+    {
+    }
+
+4. Ahora vamos a crear la clase que va a implementar el IRepositorio de categoria
+5. En la carpeta Repositorio creamos una clase que se llama CategoriaRepositorio
+6. Implementa el Repositorio y trabaja con el modelo Categoria y utuliza la interfaz de ICategoriaRepositorio:
+public class CategoriaRepositorio : Repositorio<Categoria>, ICategoriaRepositorio
+    {
+    }
+7. Ahora hacemos la inyeccion de dependencias:
+
+//Inyección de dependencias, se debe importar el IHttpClientFactory
+        private readonly IHttpClientFactory _clientFactory;
+
+8. Creamos el constructor:
+public CategoriaRepositorio(IHttpClientFactory clientFactory) : base(clientFactory)
+        {
+            _clientFactory = clientFactory;
+        }
+
+--- Agregamos el repositorio al startup ---
+1. Abrimos el archivo Startup 
+2. En el metodo ConfigureServices agrego esto:
+//Agregamos los servicios como inyeccion de dependencias
+            services.AddScoped<ICategoriaRepositorio, CategoriaRepositorio>();
+            services.AddScoped<IPeliculaRepositorio, PeliculaRepositorio>();
+            services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
+
+---- Configuración de Herramientas Boostrat, Datatables, Toastr ----
+1. Agregar esto en el archivo Views->Shared->_Layout-cshtml
+
+ <!--Assets agregados en el head del html-->
+ <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" />
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" />
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" />
+
+
+
+<!--Assets JS agregados al final antes del cierre del body-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+---- Hasta aqui es la base del proyecto ----
+
+
+
+---- Ahora vamos a empezar con los Controladores ----
+1. Creamos un controlador dando clic derecho en la carpeta Controllers->Agregar->Controlador->Controlador de MVC: en blanco y los llamamos: CtaegoriasController
+2. Instaciamos La interface del ICategoriaRepositorio
+
+//Hacemos la instancia de ICategoriaRepositorio
+        private readonly ICategoriaRepositorio _repoCategoria;
+
+3. Creamos el constructor: 
+
+public CategoriasController(ICategoriaRepositorio repoCategoria)
+        {
+            _repoCategoria = repoCategoria;
+        }
+
+4. Dentro de la vista instanciamos el modelo de Categoria
+
+public IActionResult Index()
+        {
+            return View(new Categoria() { });
+        }
+
+5. Ahora vamos a crear la vista para Categoria, damos clic derecho sobre el metodo Index()->Agregar vista ->Vista de Razor ->
+   en los "..." seleccionamos Views->Shared->_Laoyout.cshtml y lo agregamos.
+6. Ahora en la carpeta de Views tenemos creada una carpeta llamada Categorias
+7. Abrimos el index de la carpeta Categorias
+8.- En el atributo ViewData["Title"] le ponemos "Lista de categorias"
+9. Creamos el cuerpo de la vista:
+
+<div class="container p-4">
+    <div class="row">
+        <div class="col-6">
+            <h2 class="text-primary">Lista de Categorías</h2>
+        </div>
+        <div class="col-6">
+            <a asp-action="Create" class="btn btn-success text-white">Crear nueva categoría</a>
+        </div>
+    </div>
+</div>
+
+10. Abrimos el archivo _Layout y agregamos en el menu la opcion de Categorias.
+
+<li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Categorias" asp-action="Index">Categorías</a>
+                        </li>
+  
+11. Agregamos el codigo para la tabla de categorias:
+
+<div class="p-3">
+        <table id="tblCategorias" class="table table-striped table-bordered" style="width:100%">
+            <tr>
+                <td>Id</td>
+                <td>Nombre</td>
+                <td>Fecha creación</td>
+                <td>Acciones</td>
+            </tr>
+        </table>
+    </div>
+
+12. Agregamos el codigo para traer los datos dinamicos:
+
+
+@section Scripts{ 
+    <script src="~/js/categorias.js"></script>
+}
+
+13. Creamos el archivo categorias.js en "wwwroot/js"
+14. Empezamos a programar el Js:
+
+var dataTable;
+
+$(document).ready(function () {
+    loadDataTable();
+});
+
+function loadDataTable() {
+    dataTable = $("#tblCategorias").DataTable({
+        "ajax": {
+            "url": "/Categorias/GetTodasCategorias",
+            "type": "GET",
+            "datatype": "json"
+        },
+        "columns": [
+            { "data": "id", "width": "20%" },
+            { "data": "nombre", "width": "40%" },
+            { "data": "fechaCreacion", "width": "20%" },
+            {
+                "data": "id",
+                "render": function (data) {
+                    return `<div class="text-center">
+                            <a href="/Categorias/Edit/$data" class="btn btn-success text-white" style="cursor-pointer;">Editar</a>
+                            &nbsp;
+                            <a onclick=Delete("/Categorias/Delete/$data") class="btn btn-danger text-white" style="cursor-pointer;">Borrar</a>
+                           </div>`
+                }
+            }
+        ]
+    });
+}
+
+15.- Ahora vamos al controlador de CategoriasController para crear el metodo GetTodasCategorias
+
+[HttpGet]
+        public async Task<IActionResult> GetTodasCategorias()
+        {
+            return Json(new { data = await _repoCategoria.GetTodoAsync(CT.RutaCategoriasApi)});
+        }
+
+16. En el archivo Categorias.js debajo creamos la function para borrar:
+function Delete(url) {
+    swal({
+        title: "¿Estas seguro de querer borrar el registro?",
+        text: "¡Esta acción no puede ser revertida!",
+        icon: "warning",
+        buttons: true,
+        dangerMode: true
+    }).then((willDelete) => {
+        if (willDelete) {
+            $.ajax({
+                type: 'DELETE',
+                url: url,
+                success: function (data) {
+                    if (data.success) {
+                        toastr.success(data.message);
+                        dataTable.ajax.reload();
+                    }
+                    else {
+                        toastr.error(data.message);
+                    }
+                }
+            });
+        }
+    });
+}

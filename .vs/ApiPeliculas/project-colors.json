@@ -1,0 +1,26 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "fb2f5a7c-10cb-423f-85f6-26cbf84b670b": {
+      "ProjectGuid": "fb2f5a7c-10cb-423f-85f6-26cbf84b670b",
+      "DisplayName": "ApiPeliculas",
+      "ColorIndex": 0
+    },
+    "e3fdc7ea-bc6e-487b-b142-5fe98370f3fc": {
+      "ProjectGuid": "e3fdc7ea-bc6e-487b-b142-5fe98370f3fc",
+      "DisplayName": "PeliculasWeb",
+      "ColorIndex": 1
+    },
+    "87ba3427-9ee6-4589-a5fe-0777f1f31cc6": {
+      "ProjectGuid": "87ba3427-9ee6-4589-a5fe-0777f1f31cc6",
+      "DisplayName": "PeliculasApi",
+      "ColorIndex": 2
+    },
+    "e52969b7-0475-4e31-bcf6-f87864d92d76": {
+      "ProjectGuid": "e52969b7-0475-4e31-bcf6-f87864d92d76",
+      "DisplayName": "ConsumoApiPeliculas",
+      "ColorIndex": 3
+    }
+  },
+  "NextColorIndex": 4
+}
